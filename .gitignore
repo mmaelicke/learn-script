@@ -1,0 +1,60 @@
+# macOS/editor noise
+.DS_Store
+*.swp
+*.swo
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Environment and secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Backend runtime data
+backend/agent-backend/data/
+backend/db-backend/pb_data/
+backend/db-backend/pocketbase
+backend/db-backend/pocketbase.exe
+
+# Flutter/Dart/Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app/build/
+app/coverage/
+app/app.*.symbols
+app/app.*.map.json
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+
+# Native build outputs
+.build/
+.buildlog/
+.swiftpm/
+DerivedData/
+Pods/
