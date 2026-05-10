@@ -393,9 +393,12 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
     );
   }
 
-  Future<void> _startLearnDeck({List<String>? itemIds}) async {
+  Future<void> _startLearnDeck({
+    List<String>? itemIds,
+    QuizSessionKind multiKind = QuizSessionKind.learn,
+  }) async {
     final ids = itemIds ?? _selectedItemIds.toList(growable: false);
-    if (ids.isEmpty || ids.length > 10 || _creatingLearnDeck) {
+    if (ids.isEmpty || ids.length > 12 || _creatingLearnDeck) {
       return;
     }
     final scope = _scope;
@@ -470,13 +473,17 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
           ),
         );
       } else {
+        final qc = multiKind == QuizSessionKind.assessment
+            ? assessmentQuestionCount(ids.length)
+            : 10;
+        final tls = multiKind == QuizSessionKind.assessment ? null : 1200;
         final session = await svc.createQuizSession(
           subject: widget.subject,
           curriculumItemIds: ids,
-          kind: QuizSessionKind.learn,
+          kind: multiKind,
           progressBasis: QuizProgressBasis.questions,
-          questionCount: 10,
-          timeLimitSeconds: 1200,
+          questionCount: qc,
+          timeLimitSeconds: tls,
         );
         if (!mounted) {
           return;
@@ -535,7 +542,11 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
             _SelectionBar(
               count: _selectedItemIds.length,
               creating: _creatingLearnDeck,
-              onStartLearnDeck: _startLearnDeck,
+              defaultKind: defaultKindForSelection(
+                _selectedItemIds.toList(),
+                sessions,
+              ),
+              onStartLearnDeck: (kind) => _startLearnDeck(multiKind: kind),
             ),
             Expanded(
               child: RefreshIndicator(
@@ -648,6 +659,16 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
               },
             ),
           );
+          final _nextKind = nextKindForSingleLeaf(
+            item.id,
+            sessions,
+            questionsBySessionId: questionsBySessionId,
+          );
+          final _isOngoing = activeSessionIdForItem(item.id, sessions) != null;
+          final _deckIcon =
+              (_isOngoing || _nextKind == QuizSessionKind.assessment)
+                  ? Icons.quiz_outlined
+                  : Icons.school_outlined;
           widgets.add(
             _ItemRow(
               item: item,
@@ -655,7 +676,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
               selected: _selectedItemIds.contains(item.id),
               editing: _editingItemId == item.id,
               endedSessionCount: endedCountsByItemId[item.id] ?? 0,
-              learnDeckOngoing: ongoingItemIds.contains(item.id),
+              learnDeckOngoing: _isOngoing,
               leafRingProgress: leafRingProgress(
                 item.id,
                 sessions,
@@ -674,13 +695,8 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
                       )
                       ? 1
                       : 0),
-              deckEnabled: activeSessionIdForItem(item.id, sessions) != null ||
-                  nextKindForSingleLeaf(
-                        item.id,
-                        sessions,
-                        questionsBySessionId: questionsBySessionId,
-                      ) !=
-                      null,
+              deckEnabled: _isOngoing || _nextKind != null,
+              deckIcon: _deckIcon,
               deckTooltip: _leafDeckTooltip(
                 item.id,
                 sessions,
@@ -719,25 +735,54 @@ class _DragPayload {
   final CurriculumItem? item;
 }
 
-class _SelectionBar extends StatelessWidget {
+class _SelectionBar extends StatefulWidget {
   const _SelectionBar({
     required this.count,
     required this.creating,
+    required this.defaultKind,
     required this.onStartLearnDeck,
   });
 
   final int count;
   final bool creating;
-  final VoidCallback onStartLearnDeck;
+  final QuizSessionKind defaultKind;
+  final ValueChanged<QuizSessionKind> onStartLearnDeck;
+
+  @override
+  State<_SelectionBar> createState() => _SelectionBarState();
+}
+
+class _SelectionBarState extends State<_SelectionBar> {
+  late QuizSessionKind _selectedKind;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedKind = widget.defaultKind;
+  }
+
+  @override
+  void didUpdateWidget(covariant _SelectionBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.defaultKind != widget.defaultKind) {
+      _selectedKind = widget.defaultKind;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final canStart = count > 0 && count <= 10 && !creating;
-    final warning = count > 10
-        ? 'Aktuell sind maximal 10 Inhalte im Lern-Deck möglich.'
-        : count == 0
+    final canStart = widget.count > 0 && widget.count <= 12 && !widget.creating;
+    final warning = widget.count > 12
+        ? 'Aktuell sind maximal 12 Inhalte im Lern-Deck möglich.'
+        : widget.count == 0
         ? 'Wähle mindestens einen Inhalt aus.'
         : null;
+    final icon = _selectedKind == QuizSessionKind.assessment
+        ? Icons.quiz_outlined
+        : Icons.school_outlined;
+    final label = _selectedKind == QuizSessionKind.assessment
+        ? 'Assessment starten'
+        : 'Lernen starten';
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Padding(
@@ -750,7 +795,7 @@ class _SelectionBar extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  Text('$count Inhalte im Kontext'),
+                  Text('${widget.count} Inhalte im Kontext'),
                   if (warning != null)
                     Tooltip(
                       message: warning,
@@ -770,18 +815,34 @@ class _SelectionBar extends StatelessWidget {
               label: const Text('Chat'),
             ),
             Tooltip(
-              message: warning ?? 'Lern-Deck starten',
+              message: warning ?? label,
               child: TextButton.icon(
-                onPressed: canStart ? onStartLearnDeck : null,
-                icon: creating
+                onPressed:
+                    canStart ? () => widget.onStartLearnDeck(_selectedKind) : null,
+                icon: widget.creating
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.quiz_outlined),
-                label: const Text('Lern-Deck'),
+                    : Icon(icon),
+                label: Text(label),
               ),
+            ),
+            PopupMenuButton<QuizSessionKind>(
+              tooltip: 'Session-Typ wählen',
+              icon: const Icon(Icons.arrow_drop_down),
+              onSelected: (kind) => setState(() => _selectedKind = kind),
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: QuizSessionKind.assessment,
+                  child: Text('Assessment starten'),
+                ),
+                PopupMenuItem(
+                  value: QuizSessionKind.learn,
+                  child: Text('Lernen starten'),
+                ),
+              ],
             ),
           ],
         ),
@@ -960,6 +1021,7 @@ class _ItemRow extends StatefulWidget {
     required this.leafRingProgress,
     required this.deepenCheckMarks,
     required this.deckEnabled,
+    required this.deckIcon,
     required this.deckTooltip,
     required this.onSelected,
     required this.onOpen,
@@ -977,6 +1039,7 @@ class _ItemRow extends StatefulWidget {
   final double leafRingProgress;
   final int deepenCheckMarks;
   final bool deckEnabled;
+  final IconData deckIcon;
   final String deckTooltip;
   final ValueChanged<bool> onSelected;
   final VoidCallback onOpen;
@@ -1098,6 +1161,7 @@ class _ItemRowState extends State<_ItemRow> {
           ),
           _LearnDeckIconButton(
             ongoing: widget.learnDeckOngoing,
+            icon: widget.deckIcon,
             tooltip: widget.deckTooltip,
             onPressed: widget.deckEnabled ? widget.onStartLearnDeck : null,
           ),
@@ -1116,11 +1180,13 @@ class _ItemRowState extends State<_ItemRow> {
 class _LearnDeckIconButton extends StatelessWidget {
   const _LearnDeckIconButton({
     required this.ongoing,
+    required this.icon,
     required this.tooltip,
     required this.onPressed,
   });
 
   final bool ongoing;
+  final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
 
@@ -1133,7 +1199,7 @@ class _LearnDeckIconButton extends StatelessWidget {
         IconButton(
           tooltip: ongoing ? 'Quiz (läuft)' : tooltip,
           onPressed: onPressed,
-          icon: const Icon(Icons.quiz_outlined),
+          icon: Icon(icon),
         ),
         if (ongoing)
           Positioned(
