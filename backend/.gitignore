@@ -1,0 +1,5 @@
+.env
+.env.*
+
+# stale venv from before agent-backend/ split
+.venv/

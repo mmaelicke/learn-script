@@ -1,0 +1,30 @@
+services:
+  db-backend:
+    image: ghcr.io/muchobien/pocketbase:latest
+    restart: unless-stopped
+    ports:
+      - "${POCKETBASE_PORT:-8090}:8090"
+    environment:
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD}
+
+    volumes:
+      - ./db-backend/pb_data:/pb_data
+      - ./db-backend/pb_migrations:/pb_migrations
+
+  agent-backend:
+    build: ./agent-backend
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      SCRIPT_POCKETBASE_URL: http://db-backend:8090
+      SCRIPT_USER_FOLDER: /data/user_data
+      SCRIPT_POCKETBASE_DEV_IDENTITY: ${SCRIPT_POCKETBASE_DEV_IDENTITY:-}
+      SCRIPT_POCKETBASE_DEV_PASSWORD: ${SCRIPT_POCKETBASE_DEV_PASSWORD:-}
+      SCRIPT_LLM_API_KEY: ${SCRIPT_LLM_API_KEY:-}
+      SCRIPT_LLM_BASE_URL: ${SCRIPT_LLM_BASE_URL:-}
+    volumes:
+      - ./agent-backend/data/user_data:/data/user_data
+    depends_on:
+      - db-backend

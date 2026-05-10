@@ -1,0 +1,27 @@
+[project]
+name = "script-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mirko Mälicke", email = "mirko@hydrocode.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=1.5.8",
+    "fastapi>=0.136.1",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.20",
+    "langgraph>=1.1.9",
+    "pydantic-settings>=2.14.0",
+    "python-dotenv>=1.2.2",
+    "uvicorn>=0.46.0",
+    "langchain-openai>=1.2.1",
+]
+
+[project.scripts]
+pb-token = "script_agent.integrations.pocketbase.print_pb_token:main"
+
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"
