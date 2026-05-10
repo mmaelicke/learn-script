@@ -11,6 +11,9 @@
 .env
 .env.*
 
+# Local examples
+example/
+
 # Python
 __pycache__/
 *.py[cod]
