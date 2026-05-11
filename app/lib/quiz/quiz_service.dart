@@ -280,7 +280,9 @@ class QuizService {
 
   static String _newRequestId(String prefix) {
     final ms = DateTime.now().microsecondsSinceEpoch;
-    final r = _rng.nextInt(1 << 32);
+    // 1 << 32 evaluates to 0 on Flutter web (dart2js 32-bit shift); use a
+    // safe bound instead.
+    final r = _rng.nextInt(1 << 30);
     return '$prefix-$ms-$r';
   }
 }

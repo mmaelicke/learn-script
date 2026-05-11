@@ -783,8 +783,11 @@ class _SelectionBarState extends State<_SelectionBar> {
     final label = _selectedKind == QuizSessionKind.assessment
         ? 'Assessment starten'
         : 'Lernen starten';
+    final scheme = Theme.of(context).colorScheme;
+    final buttonColor =
+        canStart ? scheme.primary : scheme.onSurface.withValues(alpha: 0.38);
     return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      color: scheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: Row(
@@ -801,9 +804,7 @@ class _SelectionBarState extends State<_SelectionBar> {
                       message: warning,
                       child: Text(
                         warning,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        style: TextStyle(color: scheme.error),
                       ),
                     ),
                 ],
@@ -814,35 +815,90 @@ class _SelectionBarState extends State<_SelectionBar> {
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Chat'),
             ),
+            // GitHub-style split button: main action + dropdown in one outlined group
             Tooltip(
               message: warning ?? label,
-              child: TextButton.icon(
-                onPressed:
-                    canStart ? () => widget.onStartLearnDeck(_selectedKind) : null,
-                icon: widget.creating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(icon),
-                label: Text(label),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: buttonColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Main action area
+                      InkWell(
+                        onTap: canStart
+                            ? () => widget.onStartLearnDeck(_selectedKind)
+                            : null,
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(7),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              widget.creating
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: buttonColor,
+                                      ),
+                                    )
+                                  : Icon(icon, size: 18, color: buttonColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                label,
+                                style: TextStyle(color: buttonColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Vertical divider
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: buttonColor,
+                      ),
+                      // Dropdown arrow
+                      PopupMenuButton<QuizSessionKind>(
+                        enabled: canStart,
+                        tooltip: 'Session-Typ wählen',
+                        onSelected: (kind) =>
+                            setState(() => _selectedKind = kind),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 8,
+                          ),
+                          child: Icon(
+                            Icons.arrow_drop_down,
+                            color: buttonColor,
+                          ),
+                        ),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: QuizSessionKind.assessment,
+                            child: Text('Assessment starten'),
+                          ),
+                          PopupMenuItem(
+                            value: QuizSessionKind.learn,
+                            child: Text('Lernen starten'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            PopupMenuButton<QuizSessionKind>(
-              tooltip: 'Session-Typ wählen',
-              icon: const Icon(Icons.arrow_drop_down),
-              onSelected: (kind) => setState(() => _selectedKind = kind),
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: QuizSessionKind.assessment,
-                  child: Text('Assessment starten'),
-                ),
-                PopupMenuItem(
-                  value: QuizSessionKind.learn,
-                  child: Text('Lernen starten'),
-                ),
-              ],
             ),
           ],
         ),
