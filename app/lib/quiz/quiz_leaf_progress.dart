@@ -111,6 +111,32 @@ QuizSessionKind? nextKindForSingleLeaf(
   return QuizSessionKind.deepen;
 }
 
+/// Default session kind for a multi-item selection based on the 70% threshold.
+///
+/// Returns [QuizSessionKind.learn] when ≥ 70% of the selected items have
+/// passed the assessment stage. An item is counted as assessed when it has an
+/// ended assessment session OR an ended learn session (the latter implies
+/// assessment was completed first, and also handles legacy sessions where
+/// [QuizSession.sessionKind] was null and defaults to learn).
+QuizSessionKind defaultKindForSelection(
+  List<String> ids,
+  List<QuizSession> sessions,
+) {
+  if (ids.isEmpty) {
+    return QuizSessionKind.assessment;
+  }
+  final assessed = ids
+      .where((id) =>
+          hasEndedAssessment(id, sessions) || hasEndedLearn(id, sessions))
+      .length;
+  return assessed / ids.length >= 0.7
+      ? QuizSessionKind.learn
+      : QuizSessionKind.assessment;
+}
+
+/// Question count for a multi-item assessment: one per item, clamped [3, 12].
+int assessmentQuestionCount(int itemCount) => itemCount.clamp(3, 12);
+
 double leafRingProgress(
   String itemId,
   List<QuizSession> all,

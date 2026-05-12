@@ -166,7 +166,7 @@ def create_quiz_session_core(
     q_count = body.question_count
     t_limit = body.time_limit_seconds
     if kind == "assessment":
-        q_count = 5
+        q_count = max(3, min(len(item_ids), 12))
         t_limit = None
 
     if body.progress_basis in ("questions", "time"):
