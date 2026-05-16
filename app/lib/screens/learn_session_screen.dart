@@ -439,7 +439,7 @@ class _LearnSessionScreenState extends State<LearnSessionScreen>
       if (mounted) {
         setState(() => _reviewText = review.text.trim());
       }
-      await _service.patchSessionStatus(widget.sessionId, 'review');
+      await _service.patchSessionStatus(widget.sessionId, 'ended');
       await _reload();
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -500,7 +500,7 @@ class _LearnSessionScreenState extends State<LearnSessionScreen>
         break;
       }
     }
-    final inReview = _session?.status == 'review';
+    final inReview = _reviewText.isNotEmpty;
     final awaitingNextQuestion =
         !inReview &&
         !_streaming &&
@@ -544,7 +544,7 @@ class _LearnSessionScreenState extends State<LearnSessionScreen>
                   questions: answered,
                   checkingId: _checkingQuestionId,
                 ),
-              if (inReview && _reviewText.isNotEmpty)
+              if (inReview)
                 _ReviewCard(text: _reviewText),
               if (!inReview) ...[
                 if (_streaming)
